@@ -6,6 +6,7 @@ import edu.cmu.cs214.booking.domain.TimeInterval;
 import edu.cmu.cs214.booking.domain.User;
 import edu.cmu.cs214.booking.domain.WaitlistEntry;
 import edu.cmu.cs214.booking.repo.BookingStore;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,14 +50,32 @@ public class BookingService {
     }
 
     /**
-     * Cancels the confirmed booking with the given id, freeing its time slot.
-     * Unknown ids are ignored: nothing happens and no waitlist user is promoted.
+     * Cancels the confirmed booking with the given id, freeing its time slot, then
+     * promotes at most one waiting user from that room's waitlist into the freed
+     * slot. Promotion is first-come first-served by arrival sequence and never
+     * creates an overlap with the remaining confirmed bookings. Unknown ids are
+     * ignored: nothing happens and no waitlist user is promoted.
      */
     public void cancelBooking(String bookingId) {
         Optional<Booking> cancelled = store.findBooking(bookingId);
         if (cancelled.isEmpty()) {
             return;
         }
+        Room room = cancelled.get().room();
         store.removeBooking(bookingId);
+
+        List<WaitlistEntry> waiters = store.waitlistForRoom(room).stream()
+                .sorted(Comparator.comparingInt(WaitlistEntry::seq))
+                .toList();
+        for (WaitlistEntry waiter : waiters) {
+            boolean fits = store.bookingsForRoom(room).stream()
+                    .noneMatch(b -> b.interval().overlaps(waiter.interval()));
+            if (fits) {
+                store.removeWaitlistEntry(waiter.id());
+                Booking promoted = new Booking("b" + nextBookingSeq++, room, waiter.user(), waiter.interval());
+                store.addBooking(promoted);
+                return;
+            }
+        }
     }
 }
