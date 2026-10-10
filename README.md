@@ -28,5 +28,5 @@ See the Lab 1 handout on the course page for the three milestones you show a TA.
 
 ## 工具与模型声明
 
-- 工具：Claude Code（命令行）；IDE：IntelliJ IDEA
-- 模型：<填写会话中实际使用的模型名称>
+- 工具：豆包（Doubao）对话式智能体；IDE：IntelliJ IDEA
+- 模型：豆包（Doubao）
